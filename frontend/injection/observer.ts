@@ -166,6 +166,6 @@ async function _handleGamePage(doc: Document, mode: UIMode): Promise<void> {
   panelDoc = freshTarget.doc;
 
   console.log('[ProtonDB] rating fetched:', rating.tier);
-  freshTarget.row.appendChild(createBadge(rating, appId, freshTarget.doc));
+  freshTarget.row.appendChild(createBadge(rating, freshTarget.doc));
   processingAppId = null;
 }

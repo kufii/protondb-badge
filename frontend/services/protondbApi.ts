@@ -9,6 +9,7 @@ export interface ProtonDbRating {
   score: number;
   total: number;
   trendingTier: string;
+  appId: number;
 }
 
 const cache = new Map<number, ProtonDbRating | null>();
@@ -44,7 +45,8 @@ export async function fetchProtonDbRating(
       confidence: data.confidence ?? '',
       score: data.score ?? 0,
       total: data.total ?? 0,
-      trendingTier: data.trendingTier ?? data.tier
+      trendingTier: data.trendingTier ?? data.tier,
+      appId: data.resolvedAppId
     };
 
     cache.set(appId, rating);

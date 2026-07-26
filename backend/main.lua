@@ -33,7 +33,14 @@ local function fetch_protondb_summary(appId)
         return json.encode({ error = "status " .. tostring(res.status) })
     end
 
-    return res.body
+    local ok, data = pcall(json.decode, res.body)
+    if not ok or type(data) ~= "table" then
+        logger:error("FetchProtonDb: failed to decode protondb response for appId " .. tostring(appId))
+        return json.encode({ error = "bad protondb response" })
+    end
+
+    data.resolvedAppId = appId
+    return json.encode(data)
 end
 
 -- Resolves a title to a real Steam appid via the store search endpoint.
