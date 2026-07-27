@@ -16,7 +16,7 @@ const cache = new Map<number, ProtonDbRating | null>();
 
 const NON_STEAM_APPID_THRESHOLD = 0x80000000;
 
-function isNonSteamGame(appId: number): boolean {
+export function isNonSteamGame(appId: number): boolean {
   return appId >= NON_STEAM_APPID_THRESHOLD;
 }
 

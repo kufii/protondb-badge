@@ -118,15 +118,18 @@ function _findInDoc(doc: Document): HTMLElement | null {
 /**
  * Searches the main document AND all g_PopupManager windows for the game stats toolbar row.
  */
-export function findToolbarRow(): ToolbarTarget | null {
-  const inMain = _findInDoc(document);
+export function findToolbarRow(doc: Document): ToolbarTarget | null {
+  const inMain = _findInDoc(doc);
   if (inMain) {
     console.log('[ProtonDB] findToolbarRow: found in main document');
-    return { row: inMain, doc: document };
+    return { row: inMain, doc: doc };
   }
 
-  // Steam renders the game library detail panel in a separate popup window
-  const g_PM = (window as any).g_PopupManager;
+  // Steam renders the game library detail panel in a separate popup window,
+  // scoped to g_PopupManager on the SAME window as doc — not the global
+  // `window`, which is bound to whichever window this script first ran in.
+  const win = doc.defaultView as any;
+  const g_PM = win?.g_PopupManager;
   const popups: any[] = g_PM?.GetPopups?.() ?? [];
   let checked = 0;
   for (const popup of popups) {
@@ -136,7 +139,7 @@ export function findToolbarRow(): ToolbarTarget | null {
     } catch {
       continue;
     }
-    if (!popDoc || popDoc === document) continue;
+    if (!popDoc || popDoc === doc) continue;
     checked++;
     const found = _findInDoc(popDoc);
     if (found) {

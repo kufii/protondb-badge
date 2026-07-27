@@ -31,9 +31,16 @@ export function clearRoutePatchData(): void {
 
 export function detectGamePage(
   _doc: Document,
-  _mode: UIMode
+  mode: UIMode
 ): GamePageInfo | null {
-  if (patchedAppId !== null && patchedMode !== null) {
+  // Only trust patched route data when we're actually being asked about
+  // Big Picture — otherwise stale data left over from a previous Big
+  // Picture session can hijack desktop detection after switching back.
+  if (
+    mode === UIMode.BigPicture &&
+    patchedAppId !== null &&
+    patchedMode !== null
+  ) {
     const title = patchedTitle ?? resolveTitle(patchedAppId) ?? '';
     return { appId: patchedAppId, mode: patchedMode, title };
   }
