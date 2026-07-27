@@ -1,4 +1,9 @@
-import { UIMode, detectGamePage } from './detector';
+import {
+  UIMode,
+  detectGamePage,
+  setRoutePatchData,
+  clearRoutePatchData
+} from './detector';
 import { fetchProtonDbRating } from '../services/protondbApi';
 import { findToolbarRow, createBadge } from '../display/badge';
 
@@ -10,6 +15,43 @@ let currentAppId: number | null = null;
 let processingAppId: number | null = null;
 let panelDoc: Document | null = null; // iframe/doc where badge actually lives
 let _lastLoggedAppId: number | null | undefined = undefined;
+
+let routePatchCleanup: (() => void) | null = null;
+
+function setupRoutePatch(): void {
+  const routerHook = (window as any).__ROUTER_HOOK_INSTANCE;
+  if (!routerHook) {
+    console.log(
+      '[ProtonDB] Router hook not available, Big Picture detection will not work'
+    );
+    return;
+  }
+
+  const patchFn = (props: any) => {
+    const renderFunc = props.children?.props?.renderFunc;
+    if (renderFunc) {
+      const orig = renderFunc;
+      props.children.props.renderFunc = (...args: any[]) => {
+        const ret = orig(...args);
+        const overview = ret?.props?.children?.props?.overview;
+        if (overview?.appid) {
+          setRoutePatchData(
+            overview.appid,
+            UIMode.BigPicture,
+            overview.display_name
+          );
+        }
+        return ret;
+      };
+    }
+    return props;
+  };
+
+  const EUIMODE_GAMEPAD = 4;
+  routerHook.addPatch('/library/app/:appid', patchFn, EUIMODE_GAMEPAD);
+  routePatchCleanup = () =>
+    routerHook.removePatch('/library/app/:appid', patchFn, EUIMODE_GAMEPAD);
+}
 
 function clearCurrentBadge(): void {
   panelDoc?.getElementById(BADGE_ID)?.remove();
@@ -32,11 +74,25 @@ export function disconnectObserver(): void {
   currentAppId = null;
   processingAppId = null;
   panelDoc = null;
+
+  if (routePatchCleanup) {
+    routePatchCleanup();
+    routePatchCleanup = null;
+  }
 }
 
 export function setupObserver(doc: Document, mode: UIMode): void {
   disconnectObserver();
   _lastLoggedAppId = undefined;
+
+  if (routePatchCleanup) {
+    routePatchCleanup();
+    routePatchCleanup = null;
+  }
+
+  if (mode === UIMode.BigPicture) {
+    setupRoutePatch();
+  }
 
   console.log(
     '[ProtonDB] setupObserver: doc is global document?',
@@ -88,6 +144,9 @@ async function _handleGamePage(doc: Document, mode: UIMode): Promise<void> {
   if (!info) {
     if (currentAppId !== null) {
       resetStateForNoGame();
+    }
+    if (mode === UIMode.BigPicture) {
+      clearRoutePatchData();
     }
     return;
   }
